@@ -14,7 +14,7 @@ const pg = require('pg');
 
 // Initialise postgres client
 const config = {
-  user: 'akira',
+  user: 'dsen',
   host: '127.0.0.1',
   database: 'pokemons',
   port: 5432,
@@ -94,7 +94,7 @@ const getPokemon = (request, response) => {
 
 const postPokemon = (request, response) => {
   let params = request.body;
-  
+
   const queryString = 'INSERT INTO pokemon(name, height) VALUES($1, $2);';
   const values = [params.name, params.height];
 
@@ -185,6 +185,112 @@ const userCreate = (request, response) => {
   });
 }
 
+const checkUser = (request , response)=>{
+    let currentusername = request.body.name
+
+    const queryString = 'SELECT * FROM users';
+
+    pool.query(queryString, (err, result) => {
+        let redirectUrl = '/currentuser/'
+
+        if (err) {
+
+          console.error('Query error:', err.stack);
+          response.send('dang it.');
+        } else {
+
+            result.rows.forEach((element)=>{
+                if (currentusername === element.name){
+                    console.log(element.id)
+                    redirectUrl += element.id
+
+                }
+            })
+
+          // console.log('Query result:', result.rows[0].id);
+          // console.log(typeof result.rows[0])
+          // redirect to home page
+
+          response.redirect(redirectUrl);
+        }
+    });
+
+
+}
+
+const userLogin = (request , response)=>{
+    let currentuserid = request.params.id;
+
+    response.render('users/login');
+}
+
+const currentUser = (request , response)=>{
+    let currentuser = request.params.id
+
+    let queryString = 'SELECT users.id AS userid ,users.name AS playername, pokemon.name AS pokemonname, pokemon.img AS pokemonimage FROM pokemon_users INNER JOIN users ON (pokemon_users.user_id = users.id) INNER JOIN pokemon ON (pokemon_users.pokemon_id = pokemon.id) WHERE users.id =' + currentuser;
+
+    // let queryString = 'SELECT * FROM pokemon_users INNER JOIN users ON (users.id = pokemon_users.user_id) INNER JOIN pokemon ON (pokemon_users.pokemon_id = pokemon.id) WHERE pokemon_users.id =' + currentuser;
+
+
+    pool.query(queryString, (err, result) => {
+        if (err) {
+          console.error('Query error:', err.stack);
+          response.send('dang it.');
+        } else{
+
+        let playerstats = result.rows
+
+
+        response.render('users/currentuser', {player: playerstats});
+
+        }
+
+
+    })
+};
+
+
+const catchPokemon = (request, response) => {
+    let currentplayer = request.params.id
+
+  const queryString = 'SELECT * from pokemon';
+
+  pool.query(queryString, (err, result) => {
+    if (err) {
+      console.error('Query error:', err.stack);
+    } else {
+
+        let objectPokemonId = {
+            playerid: request.params.id,
+            pokemon: result.rows};
+
+
+    response.render('pokemon/catchpokemon' , {allpokemon:objectPokemonId});
+
+    }
+  });
+
+
+}
+
+const storePokemon = (request, response) => {
+
+  // const queryString = 'SELECT * from pokemon';
+
+  //     pool.query(queryString, (err, result) => {
+  //       if (err) {
+  //         console.error('Query error:', err.stack);
+  //       } else {
+
+
+
+
+  //       }
+  //     });
+    response.send("store pokemon");
+
+}
+
 /**
  * ===================================
  * Routes
@@ -208,6 +314,13 @@ app.delete('/pokemon/:id', deletePokemon);
 
 app.get('/users/new', userNew);
 app.post('/users', userCreate);
+
+app.post('/checkuser', checkUser);
+app.get('/userlogin', userLogin);
+app.get('/currentuser/:id', currentUser);
+app.get('/currentuser/:id/catchpokemon', catchPokemon);
+
+app.post('/currentuser/:id/storepokemon', storePokemon);
 
 /**
  * ===================================
